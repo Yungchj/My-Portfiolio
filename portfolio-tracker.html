@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #1D9E75;
+    --accent-light: #E1F5EE;
+    --accent-dark: #0F6E56;
+    --bg: #ffffff;
+    --bg2: #f7f7f5;
+    --bg3: #f0efeb;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18;
+    --text2: #5f5e5a;
+    --text3: #9a9994;
+    --red: #E24B4A;
+    --red-bg: #FCEBEB;
+    --green: #1D9E75;
+    --green-bg: #E1F5EE;
+    --amber: #BA7517;
+    --amber-bg: #FAEEDA;
+    --blue: #185FA5;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  [data-theme="dark"] {
+    --bg: #1c1c1a;
+    --bg2: #242422;
+    --bg3: #2c2c2a;
+    --border: rgba(255,255,255,0.1);
+    --border2: rgba(255,255,255,0.18);
+    --text: #f0efe8;
+    --text2: #a8a79f;
+    --text3: #6a6963;
+    --red-bg: #2d1515;
+    --green-bg: #0d2b20;
+    --amber-bg: #2a1f08;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); background: var(--bg3); color: var(--text); min-height: 100vh; transition: background .2s, color .2s; }
+
+  /* Layout */
+  .shell { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+  .topbar { background: var(--bg); border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .topbar-inner { display: flex; align-items: center; gap: 1rem; padding: 12px 0; }
+  .logo { font-family: var(--font-head); font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .tabs { display: flex; gap: 2px; margin-left: auto; }
+  .tab { padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; color: var(--text2); border-radius: 6px; transition: all .15s; font-family: var(--font-sans); }
+  .tab:hover { background: var(--bg2); color: var(--text); }
+  .tab.active { background: var(--accent-light); color: var(--accent-dark); }
+  [data-theme="dark"] .tab.active { background: #0d2b20; color: #5DCAA5; }
+  .btn-theme { margin-left: 8px; padding: 6px 10px; background: none; border: 0.5px solid var(--border2); border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--text2); transition: all .15s; }
+  .btn-theme:hover { background: var(--bg2); }
+
+  /* Main content */
+  .main { padding: 2rem 0; }
+  .panel { display: none; } .panel.active { display: block; }
+
+  /* Panel 0 – Holdings */
+  .add-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+  .add-card h2 { font-family: var(--font-head); font-size: 15px; font-weight: 600; margin-bottom: 1rem; }
+  .form-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  .fg { display: flex; flex-direction: column; gap: 5px; }
+  .fg label { font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .6px; }
+  .fg input { height: 38px; padding: 0 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); font-size: 14px; font-family: var(--font-mono); outline: none; transition: border .15s; }
+  .fg input:focus { border-color: var(--accent); }
+  .fg input::placeholder { color: var(--text3); }
+  .btn-add { height: 38px; padding: 0 20px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; font-family: var(--font-sans); transition: opacity .15s; }
+  .btn-add:hover { opacity: .85; }
+  .hint { font-size: 11px; color: var(--text3); margin-top: 8px; }
+
+  /* Holdings table */
+  .table-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1.5rem; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; padding: 10px 14px; text-align: left; border-bottom: 0.5px solid var(--border); background: var(--bg2); }
+  thead th:not(:first-child) { text-align: right; }
+  tbody td { padding: 11px 14px; font-size: 13px; border-bottom: 0.5px solid var(--border); font-family: var(--font-mono); color: var(--text); }
+  tbody td:first-child { font-family: var(--font-head); font-weight: 600; font-size: 14px; }
+  tbody td:not(:first-child) { text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg2); }
+  tfoot td { padding: 11px 14px; font-size: 13px; font-family: var(--font-mono); font-weight: 500; border-top: 0.5px solid var(--border2); text-align: right; }
+  tfoot td:first-child { font-family: var(--font-head); font-weight: 600; text-align: left; }
+
+  .badge-cdr { display: inline-block; font-size: 9px; font-weight: 600; background: var(--amber-bg); color: var(--amber); padding: 1px 5px; border-radius: 3px; font-family: var(--font-sans); margin-left: 5px; vertical-align: middle; letter-spacing: .3px; }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .btn-remove { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 18px; line-height: 1; padding: 0 2px; transition: color .15s; }
+  .btn-remove:hover { color: var(--red); }
+
+  /* Action bar */
+  .action-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn-primary { padding: 9px 22px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-sans); transition: opacity .15s; display: flex; align-items: center; gap: 6px; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-secondary { padding: 9px 18px; background: none; color: var(--text2); border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-sans); transition: all .15s; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .status { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
+  .status.loading { color: var(--accent); }
+  .status.error { color: var(--red); }
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--accent-light); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* Panel 1 – Allocation */
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; font-weight: 500; }
+  .metric-value { font-size: 22px; font-weight: 500; font-family: var(--font-mono); }
+
+  .alloc-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+  .chart-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; }
+  .card-title { font-family: var(--font-head); font-size: 14px; font-weight: 600; margin-bottom: 1rem; color: var(--text2); }
+  .chart-wrap { position: relative; width: 100%; height: 280px; }
+  .legend { display: flex; flex-direction: column; gap: 7px; margin-top: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-name { color: var(--text); font-weight: 500; flex: 1; font-family: var(--font-head); font-size: 13px; }
+  .legend-pct { color: var(--text2); font-family: var(--font-mono); font-size: 12px; }
+
+  .alloc-table-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .alloc-table-card table thead th { text-align: left; }
+  .alloc-table-card table tbody td { text-align: left; }
+  .pct-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .pct-bar { height: 6px; border-radius: 3px; flex-shrink: 0; min-width: 4px; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .form-row .btn-add { grid-column: span 2; height: 38px; }
+    .alloc-layout { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    thead th:nth-child(3), thead th:nth-child(5), tbody td:nth-child(3), tbody td:nth-child(5) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="shell">
+    <div class="topbar-inner">
+      <div class="logo"><div class="logo-dot"></div>Portfolio Tracker</div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(0)">Holdings</button>
+        <button class="tab" onclick="switchTab(1)">Allocation</button>
+      </div>
+      <button class="btn-theme" onclick="toggleTheme()" title="Toggle dark mode">◐</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="shell">
+
+    <!-- Tab 0: Holdings -->
+    <div class="panel active" id="panel0">
+      <div class="add-card">
+        <h2>Add position</h2>
+        <div class="form-row">
+          <div class="fg">
+            <label>Ticker symbol</label>
+            <input id="inp-ticker" type="text" placeholder="e.g. SHOP.TO, AMZN.NE, AAPL" autocomplete="off" />
+          </div>
+          <div class="fg">
+            <label>Shares owned</label>
+            <input id="inp-shares" type="number" placeholder="100" min="0" step="any" />
+          </div>
+          <div class="fg">
+            <label>Avg cost (CAD)</label>
+            <input id="inp-cost" type="number" placeholder="50.00" min="0" step="any" />
+          </div>
+          <button class="btn-add" onclick="addHolding()">+ Add</button>
+        </div>
+        <p class="hint">CDR stocks on NEO: use .NE suffix (AMZN.NE, TSLA.NE) · TSX stocks: use .TO (SHOP.TO, XIU.TO) · US stocks: no suffix (AAPL, NVDA) — prices auto-converted to CAD</p>
+      </div>
+
+      <div id="holdings-area">
+        <div class="empty"><div class="empty-icon">📊</div>No holdings yet — add your first position above.</div>
+      </div>
+
+      <div class="action-bar" style="margin-top: 1rem;">
+        <button class="btn-primary" onclick="fetchAllPrices()" id="btn-fetch" disabled>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 1v6M8 1l-3 3M8 1l3 3"/><path d="M1 10c0 2.8 2.2 5 5 5h4c2.8 0 5-2.2 5-5"/></svg>
+          Refresh prices
+        </button>
+        <button class="btn-secondary" onclick="clearAll()">Clear all</button>
+        <span class="status" id="status-msg"></span>
+      </div>
+    </div>
+
+    <!-- Tab 1: Allocation -->
+    <div class="panel" id="panel1">
+      <div id="tab1-content">
+        <div class="empty"><div class="empty-icon">📈</div>Fetch market prices on the Holdings tab first.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PALETTE = ['#1D9E75','#3266ad','#C2710C','#9A3A39','#534AB7','#C2437A','#4A7A10','#0F6E56','#0C447C','#993C1D','#3C3489','#993556'];
+let holdings = JSON.parse(localStorage.getItem('ptf_v2_holdings') || '[]');
+let priceData = {};
+let pieChart = null;
+
+// ─── Persist ───────────────────────────────────────────────────────────────
+function save() { try { localStorage.setItem('ptf_v2_holdings', JSON.stringify(holdings)); } catch(e) {} }
+
+// ─── Theme ─────────────────────────────────────────────────────────────────
+const savedTheme = localStorage.getItem('ptf_theme') || 'light';
+if (savedTheme === 'dark') document.body.setAttribute('data-theme', 'dark');
+function toggleTheme() {
+  const isDark = document.body.getAttribute('data-theme') === 'dark';
+  document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('ptf_theme', isDark ? 'light' : 'dark');
+  if (pieChart) rebuildPie();
+}
+
+// ─── Tabs ───────────────────────────────────────────────────────────────────
+function switchTab(n) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', i===n));
+  if (n === 1) buildTab1();
+}
+
+// ─── Add / Remove ───────────────────────────────────────────────────────────
+function addHolding() {
+  const ticker = (document.getElementById('inp-ticker').value || '').trim().toUpperCase();
+  const shares = parseFloat(document.getElementById('inp-shares').value);
+  const cost   = parseFloat(document.getElementById('inp-cost').value);
+  if (!ticker) { alert('Enter a ticker symbol.'); return; }
+  if (isNaN(shares) || shares <= 0) { alert('Enter a valid share count.'); return; }
+  if (isNaN(cost)   || cost   <= 0) { alert('Enter a valid average cost.'); return; }
+  if (holdings.find(h => h.ticker === ticker)) { alert(`${ticker} already exists.`); return; }
+  holdings.push({ ticker, shares, cost });
+  save();
+  renderHoldings();
+  ['inp-ticker','inp-shares','inp-cost'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('inp-ticker').focus();
+}
+
+function removeHolding(ticker) {
+  holdings = holdings.filter(h => h.ticker !== ticker);
+  delete priceData[ticker];
+  save();
+  renderHoldings();
+  buildTab1();
+}
+
+function clearAll() {
+  if (!holdings.length) return;
+  if (!confirm('Remove all holdings?')) return;
+  holdings = []; priceData = {};
+  save();
+  renderHoldings();
+  document.getElementById('tab1-content').innerHTML = '<div class="empty"><div class="empty-icon">📈</div>Fetch market prices on the Holdings tab first.</div>';
+  if (pieChart) { pieChart.destroy(); pieChart = null; }
+  setStatus('');
+}
+
+function isCDR(t) { return t.endsWith('.NE'); }
+
+// ─── Render Holdings Table ──────────────────────────────────────────────────
+function renderHoldings() {
+  const area = document.getElementById('holdings-area');
+  const btn  = document.getElementById('btn-fetch');
+  if (!holdings.length) {
+    area.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>No holdings yet — add your first position above.</div>';
+    btn.disabled = true; return;
+  }
+  btn.disabled = false;
+
+  let totalCost = 0, totalVal = 0;
+  const rows = holdings.map(h => {
+    const pd = priceData[h.ticker];
+    const bookVal = h.shares * h.cost;
+    totalCost += bookVal;
+    const price   = pd ? `$${pd.price.toFixed(2)}` : '—';
+    const chgStr  = pd ? `<span class="${pd.change >= 0 ? 'up' : 'down'}">${pd.change >= 0 ? '+' : ''}${pd.change.toFixed(2)}%</span>` : '—';
+    const mktVal  = pd ? h.shares * pd.price : null;
+    if (mktVal) totalVal += mktVal;
+    const valStr  = mktVal ? `$${mktVal.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}` : '—';
+    const gl      = mktVal ? mktVal - bookVal : null;
+    const glStr   = gl !== null ? `<span class="${gl >= 0 ? 'up' : 'down'}">${gl >= 0 ? '+' : ''}$${Math.abs(gl).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>` : '—';
+    const glPct   = gl !== null ? `<span class="${gl >= 0 ? 'up' : 'down'}">${gl >= 0 ? '+' : ''}${((gl/bookVal)*100).toFixed(1)}%</span>` : '—';
+    return `<tr>
+      <td>${h.ticker}${isCDR(h.ticker) ? '<span class="badge-cdr">CDR</span>' : ''}</td>
+      <td>${h.shares.toLocaleString()}</td>
+      <td>$${h.cost.toFixed(2)}</td>
+      <td>${price}</td>
+      <td>${chgStr}</td>
+      <td>${valStr}</td>
+      <td>${glStr}</td>
+      <td>${glPct}</td>
+      <td><button class="btn-remove" onclick="removeHolding('${h.ticker}')" title="Remove">×</button></td>
+    </tr>`;
+  }).join('');
+
+  const totalGl = totalVal - totalCost;
+  const totalGlPct = totalCost ? ((totalGl/totalCost)*100).toFixed(1) : '—';
+  const footerVal = totalVal ? `$${totalVal.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—';
+  const footerGl  = totalVal ? `<span class="${totalGl >= 0 ? 'up' : 'down'}">${totalGl >= 0 ? '+' : ''}$${Math.abs(totalGl).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>` : '—';
+  const footerGlPct = totalVal ? `<span class="${totalGl >= 0 ? 'up' : 'down'}">${totalGl >= 0 ? '+' : ''}${totalGlPct}%</span>` : '—';
+
+  area.innerHTML = `<div class="table-card"><table>
+    <thead><tr>
+      <th>Ticker</th><th>Shares</th><th>Avg cost</th><th>Price</th><th>Day %</th><th>Mkt value</th><th>Gain / Loss</th><th>G/L %</th><th></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td>Total</td><td></td><td></td><td></td><td></td>
+      <td>${footerVal}</td><td>${footerGl}</td><td>${footerGlPct}</td><td></td>
+    </tr></tfoot>
+  </table></div>`;
+}
+
+// ─── Status ─────────────────────────────────────────────────────────────────
+function setStatus(msg, cls = '') {
+  const el = document.getElementById('status-msg');
+  el.innerHTML = msg; el.className = 'status ' + cls;
+}
+
+// ─── Fetch Prices ───────────────────────────────────────────────────────────
+// Uses Yahoo Finance v8 via a CORS proxy (allorigins.win — free, public)
+async function fetchPrice(ticker) {
+  const symbol = ticker; // Yahoo uses the same suffixes (.TO, .NE etc)
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxy);
+  const outer = await res.json();
+  const data = JSON.parse(outer.contents);
+  const meta = data.chart.result[0].meta;
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+  const change = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+  const currency = meta.currency;
+  let cadPrice = price;
+  // If quoted in USD, convert to CAD using a live rate
+  if (currency === 'USD') {
+    cadPrice = price * (window._usdcad || 1.365);
+  }
+  return { price: cadPrice, change, currency, name: meta.longName || meta.shortName || ticker };
+}
+
+async function fetchUsdCad() {
+  try {
+    const url = 'https://query1.finance.yahoo.com/v8/finance/chart/USDCAD%3DX?interval=1d&range=1d';
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxy);
+    const outer = await res.json();
+    const data = JSON.parse(outer.contents);
+    window._usdcad = data.chart.result[0].meta.regularMarketPrice;
+  } catch(e) { window._usdcad = 1.365; }
+}
+
+async function fetchAllPrices() {
+  if (!holdings.length) return;
+  const btn = document.getElementById('btn-fetch');
+  btn.disabled = true;
+  setStatus('<span class="spinner"></span>Fetching live prices…', 'loading');
+  try {
+    await fetchUsdCad();
+    let ok = 0, fail = 0;
+    for (const h of holdings) {
+      try {
+        priceData[h.ticker] = await fetchPrice(h.ticker);
+        ok++;
+      } catch(e) {
+        console.warn('Failed:', h.ticker, e);
+        fail++;
+      }
+    }
+    renderHoldings();
+    buildTab1();
+    const ts = new Date().toLocaleTimeString('en-CA', {hour:'2-digit', minute:'2-digit'});
+    setStatus(`Updated ${ok} price${ok!==1?'s':''}${fail?' · '+fail+' failed':''} · ${ts}`, '');
+  } catch(e) {
+    setStatus('Error fetching prices. Check your internet connection.', 'error');
+    console.error(e);
+  }
+  btn.disabled = false;
+}
+
+// ─── Tab 1: Allocation ──────────────────────────────────────────────────────
+function buildTab1() {
+  const priced = holdings.filter(h => priceData[h.ticker]);
+  if (!priced.length) {
+    document.getElementById('tab1-content').innerHTML = '<div class="empty"><div class="empty-icon">📈</div>Fetch market prices on the Holdings tab first.</div>';
+    return;
+  }
+  const values = priced.map(h => priceData[h.ticker].price * h.shares);
+  const total  = values.reduce((a,b) => a+b, 0);
+  const pcts   = values.map(v => (v/total*100));
+  const labels = priced.map(h => h.ticker);
+  const colors = labels.map((_,i) => PALETTE[i % PALETTE.length]);
+
+  const totalStr = `$${total.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  const totalBook = holdings.reduce((a,h) => a + h.shares*h.cost, 0);
+  const totalGl = total - totalBook;
+  const totalGlPct = ((totalGl/totalBook)*100).toFixed(1);
+
+  const legendHTML = labels.map((l,i) => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i]}"></div>
+      <span class="legend-name">${l}${isCDR(l)?'<span class="badge-cdr">CDR</span>':''}</span>
+      <span class="legend-pct">${pcts[i].toFixed(1)}%</span>
+    </div>`).join('');
+
+  const tableRows = priced.map((h,i) => {
+    const barW = Math.round(pcts[i] * 1.6);
+    return `<tr>
+      <td>${h.ticker}${isCDR(h.ticker)?'<span class="badge-cdr">CDR</span>':''}</td>
+      <td>$${values[i].toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td>
+        <div class="pct-bar-wrap">
+          <div class="pct-bar" style="width:${barW}px;background:${colors[i]}"></div>
+          <span style="font-family:var(--font-mono);font-size:12px">${pcts[i].toFixed(1)}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const glClass = totalGl >= 0 ? 'up' : 'down';
+  const glSign  = totalGl >= 0 ? '+' : '';
+
+  document.getElementById('tab1-content').innerHTML = `
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Total value</div>
+        <div class="metric-value">${totalStr}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Total gain / loss</div>
+        <div class="metric-value ${glClass}">${glSign}$${Math.abs(totalGl).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Return</div>
+        <div class="metric-value ${glClass}">${glSign}${totalGlPct}%</div>
+      </div>
+    </div>
+    <div class="alloc-layout">
+      <div class="chart-card">
+        <div class="card-title">Portfolio allocation</div>
+        <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+        <div class="legend">${legendHTML}</div>
+      </div>
+      <div class="alloc-table-card">
+        <table>
+          <thead><tr><th>Stock</th><th>Value (CAD)</th><th>Weight</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+          <tfoot><tr>
+            <td style="font-family:var(--font-head);font-weight:600">Total</td>
+            <td>${totalStr}</td>
+            <td>100.0%</td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>`;
+
+  rebuildPie(values, labels, colors);
+}
+
+function rebuildPie(values, labels, colors) {
+  if (!values) {
+    const priced = holdings.filter(h => priceData[h.ticker]);
+    values = priced.map(h => priceData[h.ticker].price * h.shares);
+    labels = priced.map(h => h.ticker);
+    colors = labels.map((_,i) => PALETTE[i % PALETTE.length]);
+  }
+  const total = values.reduce((a,b)=>a+b,0);
+  if (pieChart) { pieChart.destroy(); pieChart = null; }
+  const ctx = document.getElementById('pieChart');
+  if (!ctx) return;
+  pieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderColor: 'transparent', borderWidth: 0, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = (ctx.parsed / total * 100).toFixed(1);
+              const val = `$${ctx.parsed.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+              return ` ${val}  (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ─── Keyboard shortcut ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter') && document.activeElement.closest('.form-row')) addHolding();
+});
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+renderHoldings();
+</script>
+</body>
+</html>
